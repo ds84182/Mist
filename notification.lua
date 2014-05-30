@@ -37,6 +37,6 @@ function notification.draw()
 		love.graphics.setColor(255,255,255)
 		local width, height = Caption:getWrap(n.msg,notew)
 		height = height*Caption:getHeight()
-		love.graphics.printf(n.msg,n.x,n.y+(16-(height/2)),notew,"right")
+		love.graphics.printf(n.msg,n.x,n.y+(height/4),notew,"right")
 	end
 end

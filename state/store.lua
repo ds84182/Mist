@@ -6,8 +6,11 @@ local Store = {}
 local numstore = 0
 local numcompl = 0
 local gamesinstore = {}
+local loadedtitlelist = false
+local listdl
 local repo = "http://ds84182.github.io/mist/"
 local http = require "socket.http"
+local uielements = {}
 
 local function startDownload(url)
 	local chan = love.thread.getChannel(url)
@@ -34,80 +37,146 @@ local function isUpdated(oldver,ver)
 	end
 end
 
+local function install()
+	--start cron
+	local game = Store[cur]
+	if Games[game.id] and (not isUpdated(Games[game.id].version, game.version)) then
+		notification.add("You already have this game installed")
+		return
+	end
+	local dl, dlp = startDownload(repo.."archive/"..game.id..".zip")
+	Downloads = Downloads or {}
+	Downloads[game.id] = {dl, dlp}
+	local dlcron
+	dlcron = cron.every(1, function(c)
+		if dl:peek() then
+			notification.add("Hi. Your "..game.name.." download is finished")
+			
+			--install game--
+			love.filesystem.createDirectory("games/"..game.id)
+			love.filesystem.write("games/"..game.id.."/game.zip",dl:pop())
+			love.filesystem.write("games/"..game.id.."/conf.json",game.rawj)
+			--love.filesystem.write("games/"..game.id.."/banner.png",game.bd)
+			--save all banner assets--
+			--if you want all your assets downloaded for your custom banner, you should preload all of the assets!!!--
+			for name, val in pairs(game.banner.assets) do
+				print(name)
+				if type(val) == "string" then
+					love.filesystem.write("games/"..game.id.."/"..name, val)
+				elseif val:typeOf("Image") then
+					val:getData():encode("games/"..game.id.."/"..name)
+				elseif val:typeOf("Source") then
+					error("TODO: Reformat asset system to allow sound sources to be saved")
+				end
+			end
+			
+			cron.add(cron.after(2,function()
+				Games = {}
+				--loadingstr = {}
+				loadGames(true)
+			end))
+			
+			Downloads[game.id] = nil
+			cron.remove(dlcron)
+		end
+	end)
+	cron.add(dlcron)
+end
+
 function store:enter()
 	--load store from the internet--
 	cur = 1
+	uielements = {}
+	numstore = 0
+	numcompl = 0
+	gamesinstore = {}
+	Store = {}
+	loadedtitlelist = false
 	print("Store entered")
-	local games = http.request(repo.."games.txt")
-	for n in games:gmatch("([^\n]+)") do
-		--download JSON conf
-		--[[print("Downloading config for "..n)
-		local conf = http.request(repo.."meta/"..n.."/conf.json")
-		conf = JSON:decode(conf)
-		conf.id = n
-		print("Downloading banner for "..n)
-		local banner = http.request(repo.."meta/"..n.."/banner.png")
-		banner = love.graphics.newImage(love.image.newImageData(love.filesystem.newFileData(banner,"banner.png")))
-		conf.banner = banner
-		
-		Store[#Store+1] = conf
-		Store[n] = conf]]
-		
-		print(n)
-		gamesinstore[#gamesinstore+1] = {n,"config",dlchan=startDownload(repo.."meta/"..n.."/conf.json")}
-		numstore = numstore+1
+	listdl = startDownload(repo.."games.txt")
+	
+	uielements.install = newButton(0,500,400,100,"Install")
+	uielements.install.bl = 25
+	uielements.install.tr = 0
+	uielements.install.br = 0
+	function uielements.install:click(x,y,b)
+		install()
 	end
-	--print("Downloads finished")
+	
+	uielements.exit = newButton(400,500,400,100,"Exit")
+	uielements.exit.tl = 0
+	uielements.exit.bl = 0
+	uielements.exit.tr = 25
+	uielements.exit.br = 25
+	function uielements.exit:click(x,y,b)
+		Gamestate.pop()
+	end
 end
 
 function store:update(dt)
 	if Store[cur] then
 		Store[cur].banner:update(dt)
 	end
-	for _,game in pairs(gamesinstore) do
-		if (not game.finish) and game.dlchan:peek() then
-			if game[2] == "config" then
-				local rjconf = game.dlchan:pop()
-				local conf = JSON:decode(rjconf)
-				conf.id = game[1]
-				game.conf = conf
-				Store[#Store+1] = conf
-				Store[game[1]] = conf
-				conf.rawj = rjconf
-				game.finish = true
-				local assetDownloads = {}
-				conf.banner = newBanner(conf.banner_type,function(asset)
-					if assetDownloads[asset] then
-						if assetDownloads[asset]:peek() then
-							local ext = asset:sub(-3,-1)
-							if ext == "png" then
-								return love.graphics.newImage(love.image.newImageData(love.filesystem.newFileData(assetDownloads[asset]:pop(),asset)))
-							elseif ext == "ogg" then
-								return love.audio.newSource(love.filesystem.newFileData(assetDownloads[asset]:pop(),asset))
-							else
-								return assetDownloads[asset]:pop()
+	if not loadedtitlelist then
+		if listdl:peek() then
+			local games = listdl:pop()
+			for n in games:gmatch("([^\n]+)") do
+				print(n)
+				gamesinstore[#gamesinstore+1] = {n,"config",dlchan=startDownload(repo.."meta/"..n.."/conf.json")}
+				numstore = numstore+1
+			end
+			loadedtitlelist = true
+		end
+	else
+		for _,game in pairs(gamesinstore) do
+			if (not game.finish) and game.dlchan:peek() then
+				if game[2] == "config" then
+					local rjconf = game.dlchan:pop()
+					local conf = JSON:decode(rjconf)
+					conf.id = game[1]
+					game.conf = conf
+					Store[#Store+1] = conf
+					Store[game[1]] = conf
+					conf.rawj = rjconf
+					game.finish = true
+					local assetDownloads = {}
+					conf.banner = newBanner(conf.banner_type,function(asset)
+						if assetDownloads[asset] then
+							if assetDownloads[asset]:peek() then
+								local ext = asset:sub(-3,-1)
+								if ext == "png" then
+									return love.graphics.newImage(love.image.newImageData(love.filesystem.newFileData(assetDownloads[asset]:pop(),asset)))
+								elseif ext == "ogg" then
+									return love.audio.newSource(love.filesystem.newFileData(assetDownloads[asset]:pop(),asset))
+								else
+									return assetDownloads[asset]:pop()
+								end
 							end
+						else
+							--start the async download of the asset
+							assetDownloads[asset] = startDownload(repo.."meta/"..game[1].."/"..asset)
 						end
-					else
-						--start the async download of the asset
-						assetDownloads[asset] = startDownload(repo.."meta/"..game[1].."/"..asset)
-					end
-				end)
-				conf.banner.speed = conf.banner_speed or 1
-				numcompl = numcompl+1
-				--game.dlchan=startDownload(repo.."meta/"..game[1].."/banner.png")
-			--[[else
-				--we have banner
-				local d = game.dlchan:pop()
-				local bid = love.image.newImageData(love.filesystem.newFileData(d,"banner.png"))
-				local banner = love.graphics.newImage(bid)
-				banner:setFilter("nearest")
-				game.conf.banner = banner
-				game.conf.bd = d
-				game.finish = true
-				numcompl = numcompl+1]]
+					end)
+					conf.banner.speed = conf.banner_speed or 1
+					numcompl = numcompl+1
+					--game.dlchan=startDownload(repo.."meta/"..game[1].."/banner.png")
+				--[[else
+					--we have banner
+					local d = game.dlchan:pop()
+					local bid = love.image.newImageData(love.filesystem.newFileData(d,"banner.png"))
+					local banner = love.graphics.newImage(bid)
+					banner:setFilter("nearest")
+					game.conf.banner = banner
+					game.conf.bd = d
+					game.finish = true
+					numcompl = numcompl+1]]
+				end
 			end
 		end
+	end
+	
+	for i, v in pairs(uielements) do
+		v:update(dt)
 	end
 end
 
@@ -118,8 +187,16 @@ function store:draw()
 		if game.banner then
 			game.banner:draw()
 		end
+		
+		love.graphics.setColor(0,0,0,255)
+		if Store[cur-1] then
+			love.graphics.draw(fade,0,0,0,1,600)
+		end
+		if Store[cur+1] then
+			love.graphics.draw(fade,800,0,0,-1,600)
+		end
+		
 		love.graphics.setColor(255,255,255)
-	
 		love.graphics.setFont(Subtitle)
 		love.graphics.print(game.name,0,0)
 		love.graphics.setFont(Caption)
@@ -135,59 +212,27 @@ function store:draw()
 			love.graphics.printf("Download Progress: "..progress[1].."/"..progress[2],400,100,400,"right")
 		end
 	end
+	
+	for i, v in pairs(uielements) do
+		v:draw()
+	end
 end
 
 function store:keyreleased(key)
 	if key == " " and Store[cur] then
-		--start cron
-		local game = Store[cur]
-		if Games[game.id] and (not isUpdated(Games[game.id].version, game.version)) then
-			notification.add("You already have this game installed")
-			return
-		end
-		local dl, dlp = startDownload(repo.."archive/"..game.id..".zip")
-		Downloads = Downloads or {}
-		Downloads[game.id] = {dl, dlp}
-		local dlcron
-		dlcron = cron.every(1, function(c)
-			if dl:peek() then
-				notification.add("Hi. Your "..game.name.." download is finished")
-				
-				--install game--
-				love.filesystem.createDirectory("games/"..game.id)
-				love.filesystem.write("games/"..game.id.."/game.zip",dl:pop())
-				love.filesystem.write("games/"..game.id.."/conf.json",game.rawj)
-				--love.filesystem.write("games/"..game.id.."/banner.png",game.bd)
-				--save all banner assets--
-				--if you want all your assets downloaded for your custom banner, you should preload all of the assets!!!--
-				for name, val in pairs(game.banner.assets) do
-					print(name)
-					if type(val) == "string" then
-						love.filesystem.write("games/"..game.id.."/"..name, val)
-					elseif val:typeOf("Image") then
-						val:getData():encode("games/"..game.id.."/"..name)
-					elseif val:typeOf("Source") then
-						error("TODO: Reformat asset system to allow sound sources to be saved")
-					end
-				end
-				
-				cron.add(cron.after(2,function()
-					Games = {}
-					--loadingstr = {}
-					loadGames(true)
-				end))
-				
-				Downloads[game.id] = nil
-				cron.remove(dlcron)
-			end
-		end)
-		cron.add(dlcron)
+		install()
 	elseif key == "escape" then
 		Gamestate.pop()
 	elseif key == "left" and cur > 1 then
 		cur = cur-1
 	elseif key == "right" and cur < #Store then
 		cur = cur+1
+	end
+end
+
+function store:mousereleased(x,y,b)
+	for i, v in pairs(uielements) do
+		v:mousereleased(x,y,b)
 	end
 end
 
