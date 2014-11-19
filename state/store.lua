@@ -21,7 +21,7 @@ local function startDownload(url,port)
 end
 
 local function formatVersion(ver)
-	return ver == nil and "nil" or table.concat(ver,".")
+	return ver == nil and "?.?.?" or table.concat(ver,".")
 end
 
 local function isUpdated(oldver,ver)

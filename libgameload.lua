@@ -73,6 +73,7 @@ function loadgame(dir, mount, compat, nocustomwindow)
 		t.window.highdpi = false           -- Enable high-dpi mode for the window on a Retina display (boolean). Added in 0.9.1
 		t.window.srgb = false              -- Enable sRGB gamma correction when drawing to the screen (boolean). Added in 0.9.1
 		t.window.canvas = love.graphics.newCanvas(800,600)
+		t.window.color = {255,255,255,255}
 
 		t.modules.audio = true             -- Enable the audio module (boolean)
 		t.modules.event = true             -- Enable the event module (boolean)
@@ -91,111 +92,35 @@ function loadgame(dir, mount, compat, nocustomwindow)
 	defConf(tConf)
 	if conf then setfenv(conf, env) conf() env.love.conf(tConf) end
 	print("CONF")
+	
 	local function getOffset()
 		return 0,0
 	end
-	if not nocustomwindow then
-		--we have config--
-		--recreate love.window to use config values--
-		function env.love.window.getDimensions()
-			return tConf.window.width, tConf.window.height
-		end
-		function env.love.window.getFullscreen()
-			return tConf.window.fullscreen, tConf.window.fullscreentype
-		end
-		function env.love.window.getWidth()
-			return tConf.window.width
-		end
-		function env.love.window.getHeight()
-			return tConf.window.height
-		end
-		function env.love.window.getIcon()
-			return tConf.window.icon
-		end
-		function env.love.window.getMode()
-			return tConf.window.width, tConf.window.height, tConf.window
-		end
-		function env.love.window.getTitle()
-			return tConf.window.title
-		end
-		function env.love.window.setFullscreen(t,m)
-			tConf.window.fullscreen = t
-			tConf.window.fullscreentype = m or "normal"
-		end
-		function env.love.window.setIcon(id)
-			tConf.window.icon = id
-		end
-		function env.love.window.setMode(w,h,flags)
-			tConf.window.width = w
-			tConf.window.height = h
-			for i, v in pairs(flags or {}) do tConf.window[i] = v end
-		end
-		function env.love.window.setTitle(t)
-			tConf.window.title = t
-		end
-
-		function env.love.graphics.setCanvas(c)
-			love.graphics.setCanvas(c and c or tConf.window.canvas)
-		end
-		function env.love.graphics.clear()
-			tConf.window.canvas:clear()
-		end
-		--[[function env.love.graphics.present()
-			local oc = love.graphics.getCanvas()
-			love.graphics.setCanvas()
-			app.draw()
-			love.graphics.present()
-			love.graphics.setCanvas(oc)
-		end]]
 	
-		local function getOffset()
-			local w,h = love.window.getDimensions()
-			return (w/2)-(tConf.window.width/2),(h/2)-(tConf.window.height/2)
-		end
-	
-		function env.love.mouse.getPosition()
-			local ox, oy = getOffset()
-			local x, y = love.mouse.getPosition()
-			return x-ox, y-oy
-		end
-	
-		function env.love.mouse.getX()
-			local ox, oy = getOffset()
-			local x, y = love.mouse.getPosition()
-			return x-ox
-		end
-	
-		function env.love.mouse.getY()
-			local ox, oy = getOffset()
-			local x, y = love.mouse.getPosition()
-			return y-oy
-		end
-	
-		function env.love.mouse.setPosition(x,y)
-			local ox, oy = getOffset()
-			love.mouse.setPosition(ox+x,oy+y)
-		end
-	
-		function env.love.mouse.setX(x)
-			local ox, oy = getOffset()
-			love.mouse.setX(ox+x)
-		end
-	
-		function env.love.mouse.setY(y)
-			local ox, oy = getOffset()
-			love.mouse.setX(oy+y)
-		end
-	else
-		love.window.setMode(tConf.window.width, tConf.window.height, 
-		{
-			fullscreen = tConf.window.fullscreen,
-			vsync = tConf.window.vsync,
-			fsaa = tConf.window.fsaa,
-			resizeable = tConf.window.resizeable,
-			borderless = tConf.window.borderless,
-			centered = tConf.window.centered
-		})
+	--we have config, use it--
+	function env.love.window.getIcon()
+		return tConf.window.icon
 	end
+	function env.love.window.getTitle()
+		return tConf.window.title
+	end
+	function env.love.window.setIcon(id)
+		tConf.window.icon = id
+	end
+	
+	function env.love.window.setTitle(t)
+		tConf.window.title = t
+	end
+	
+	love.window.setMode(tConf.window.width, tConf.window.height, 
+	{
+		fullscreen = tConf.window.fullscreen,
+		vsync = tConf.window.vsync,
+		fsaa = tConf.window.fsaa,
+		resizeable = tConf.window.resizeable,
+		borderless = tConf.window.borderless,
+		centered = tConf.window.centered
+	})
 	
 	if compat then
 		require("eightpointoh")(env)
@@ -224,26 +149,16 @@ function loadgame(dir, mount, compat, nocustomwindow)
 	end
 
 	function app.draw(...)
-		if not nocustomwindow then
-			if (not tConf.window.canvas) or (tConf.window.canvas:getWidth() ~= tConf.window.width or tConf.window.canvas:getHeight() ~= tConf.window.height) then
-				tConf.window.canvas = love.graphics.newCanvas(tConf.window.width,tConf.window.height)
-			end
-			local obc = love.graphics.getCanvas()
-			tConf.window.canvas:clear()
-			tConf.window.canvas:renderTo(env.love.draw or function() end)
-			local w,h = love.window.getDimensions()
-	canvas:clear(old.bgcolor)
-	canvas:renderTo(function() prev:draw() end)
-			love.graphics.setCanvas(obc)
-			love.graphics.setColor(0,0,0)
-			love.graphics.rectangle("fill",0,0,w,h)
-			love.graphics.setColor(love.graphics.getBackgroundColor())
-			love.graphics.rectangle("fill",(w/2)-(tConf.window.width/2),(h/2)-(tConf.window.height/2),tConf.window.canvas:getDimensions())
-			love.graphics.setColor(255,255,255)
-			love.graphics.draw(tConf.window.canvas,(w/2)-(tConf.window.width/2),(h/2)-(tConf.window.height/2))
-		else
-			callIfNotNil(env.love.draw,...)
-		end
+		local oldes = love.graphics.emulatedScreen
+		love.graphics.emulatedScreen = tConf.window.canvas
+		love.graphics.setCanvas()
+		love.graphics.setColor(tConf.window.color)
+		callIfNotNil(env.love.draw,...)
+		love.graphics.emulatedScreen = nil
+		love.graphics.setCanvas()
+		tConf.window.color = {love.graphics.getColor()}
+		love.graphics.setColor(255,255,255)
+		love.graphics.draw(tConf.window.canvas,0,0)
 	end
 
 	function app.focus(...)

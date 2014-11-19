@@ -33,7 +33,7 @@ function notification.draw()
 	love.graphics.setFont(Caption)
 	for _,n in ipairs(notes) do
 		love.graphics.setColor(225,225,225,225)
-		love.graphics.rectangle("fill",n.x,n.y,notew,noteh)
+		roundrect("fill",n.x,n.y,notew,noteh,0,5,0,5)
 		love.graphics.setColor(0,0,0)
 		local width, height = Caption:getWrap(n.msg,notew)
 		height = height*Caption:getHeight()

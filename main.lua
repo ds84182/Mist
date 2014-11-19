@@ -18,6 +18,18 @@ function love.graphics.draw(i,...)
 	end
 end
 
+love.graphics.emulatedScreen = nil --blank calls to love.graphics.setCanvas will bind this instead--
+local lgs = love.graphics.setCanvas
+local lgg = love.graphics.getCanvas
+function love.graphics.setCanvas(c)
+	lgs(c or love.graphics.emulatedScreen)
+end
+
+function love.graphics.getCanvas()
+	local c = lgg()
+	return c == love.graphics.emulatedScreen and nil or c
+end
+
 function roundrect(mode,x,y,w,h,tl,tr,bl,br)
 	tl = tl or 0
 	tr = tr or tl

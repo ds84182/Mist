@@ -7,11 +7,7 @@ local scale
 function multitaskui:enter(prev)
 	print("game suspension successful (except for threads)")
 	old.bgcolor = {love.graphics.getBackgroundColor()}
-	canvas = love.graphics.newCanvas(love.graphics.getDimensions())
-	canvas:clear(old.bgcolor)
-	love.graphics.setCanvas(canvas)
-	prev:draw()
-	love.graphics.setCanvas()
+	canvas = current_game.tConf.window.canvas
 	love.graphics.setBackgroundColor(0,0,0)
 	scale = {1}
 	flux.to(scale,1,{0.5})
@@ -23,6 +19,7 @@ function multitaskui:leave()
 end
 
 function multitaskui:draw()
+	love.graphics.setColor(255,255,255)
 	love.graphics.draw(canvas,canvas:getWidth()/2,canvas:getHeight()/2,0,scale[1],scale[1],canvas:getWidth()/2,canvas:getHeight()/2)
 end
 
