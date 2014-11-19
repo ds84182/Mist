@@ -2,7 +2,7 @@ local loading = {}
 
 Fonts = {}
 Sizes = {
-Title = 80,
+Title = 96,
 Subtitle = 50,
 Caption = 18}
 
@@ -13,6 +13,7 @@ loadingstr = {}
 love.window.setTitle("Mist")
 
 local function refreshLoadingScreen()
+	local width, height = love.graphics.getDimensions()
 	love.graphics.clear()
 	--flush events
 	love.event.pump()
@@ -31,12 +32,12 @@ local function refreshLoadingScreen()
 	love.graphics.setFont(Title)
 	love.graphics.print("Mist")
 	love.graphics.setFont(Subtitle)
-	love.graphics.print("\tloading...",0,80)
+	love.graphics.print("\tloading...",0,100)
 	
 	love.graphics.setFont(Caption)
-	local start = 600-(Caption:getHeight()*#loadingstr)
+	local start = height-(Caption:getHeight()*#loadingstr)
 	for i=1, #loadingstr do
-		love.graphics.printf(loadingstr[i],0,start,800,"right")
+		love.graphics.printf(loadingstr[i],0,start,width,"right")
 		start = start+Caption:getHeight()
 	end
 	
@@ -44,6 +45,7 @@ local function refreshLoadingScreen()
 end
 
 function loadGames(nps)
+	log "Loading installed games"
 	for _,game in pairs(love.filesystem.getDirectoryItems("games")) do
 		local conf = JSON:decode(love.filesystem.read("games/"..game.."/conf.json"))
 		conf.id = game
@@ -73,6 +75,7 @@ function loadGames(nps)
 end
 
 function loading:enter()
+	log "Loading Fonts"
 	for i, v in pairs(Sizes) do
 		Fonts[i] = {}
 	end
@@ -94,6 +97,7 @@ function loading:enter()
 	loadGames()
 	
 	Gamestate.switch(require "state.menu")
+	--Gamestate.switch(require "state.twelvefoot")
 end
 
 return loading

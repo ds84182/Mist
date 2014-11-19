@@ -2,6 +2,7 @@ local menu = {}
 
 local cur = 1
 local uielements = {}
+local width, height
 --TODO: Check hash in thread--
 
 --[[if game.hash and game.hash ~= "" then
@@ -20,25 +21,30 @@ local uielements = {}
 end]]
 
 function menu:enter()
+	width, height = love.graphics.getDimensions()
 	cur = 1
 	uielements = {}
-	uielements.store = newButton(0,500,150,100,"Store")
+	local smw = width*(150/800)
+	local lmw = width*(500/800)
+	uielements.store = newButton(0,height-100,smw,100,"Store")
 	function uielements.store:click(x,y,b)
 		Gamestate.push(require "state.store")
 	end
-	uielements.store.bl = 25
 	uielements.store.tr = 0
 	uielements.store.br = 0
 	
-	uielements.play = newButton(150,500,500,100,"Play")
+	uielements.play = newButton(smw,height-100,lmw,100,"Play")
 	function uielements.play:click(x,y,b)
 		local game = Games[cur]
 		current_game = loadgame(game.id,"games/"..game.id.."/game.zip",nil,true)
 		Gamestate.push(require "state.game")
 	end
 	uielements.play.tl = 0
+	uielements.play.tr = 0
+	uielements.play.bl = 0
+	uielements.play.br = 0
 	
-	uielements.delete = newButton(650,500,150,100,"Delete")
+	uielements.delete = newButton(lmw+smw,height-100,smw,100,"Delete")
 	function uielements.delete:click(x,y,b)
 		local game = Games[cur]
 		if game then
@@ -57,8 +63,6 @@ function menu:enter()
 	end
 	uielements.delete.tl = 0
 	uielements.delete.bl = 0
-	uielements.delete.tr = 25
-	uielements.delete.br = 25
 end
 
 function menu:update(dt)
@@ -78,10 +82,10 @@ function menu:draw()
 		
 		love.graphics.setColor(0,0,0,255)
 		if Games[cur-1] then
-			love.graphics.draw(fade,0,0,0,1,600)
+			love.graphics.draw(fade,0,0,0,1,height)
 		end
 		if Games[cur+1] then
-			love.graphics.draw(fade,800,0,0,-1,600)
+			love.graphics.draw(fade,width,0,0,-1,height)
 		end
 	
 		love.graphics.setColor(255,255,255)
@@ -90,10 +94,10 @@ function menu:draw()
 		love.graphics.setFont(Caption)
 		love.graphics.print(game.desc,0,Subtitle:getHeight())
 	
-		love.graphics.printf("Game is ready to play",600,0,200,"right")
+		love.graphics.printf("Game is ready to play",width-200,0,200,"right")
 	else
 		love.graphics.setFont(Subtitle)
-		love.graphics.printf("You have no games installed! Go install some at the store!", 0,0, 800, "center")
+		love.graphics.printf("You have no games installed! Go install some at the store!", 0,0, width, "center")
 	end
 	
 	for i, v in pairs(uielements) do

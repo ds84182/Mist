@@ -228,9 +228,13 @@ function loadgame(dir, mount, compat, nocustomwindow)
 			if (not tConf.window.canvas) or (tConf.window.canvas:getWidth() ~= tConf.window.width or tConf.window.canvas:getHeight() ~= tConf.window.height) then
 				tConf.window.canvas = love.graphics.newCanvas(tConf.window.width,tConf.window.height)
 			end
+			local obc = love.graphics.getCanvas()
 			tConf.window.canvas:clear()
 			tConf.window.canvas:renderTo(env.love.draw or function() end)
 			local w,h = love.window.getDimensions()
+	canvas:clear(old.bgcolor)
+	canvas:renderTo(function() prev:draw() end)
+			love.graphics.setCanvas(obc)
 			love.graphics.setColor(0,0,0)
 			love.graphics.rectangle("fill",0,0,w,h)
 			love.graphics.setColor(love.graphics.getBackgroundColor())
@@ -286,6 +290,8 @@ function loadgame(dir, mount, compat, nocustomwindow)
 	function app.visible(...)
 		callIfNotNil(env.love.visible,...)
 	end
+	
+	app.tConf = tConf
 	
 	return app
 end

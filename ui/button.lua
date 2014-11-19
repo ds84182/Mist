@@ -33,16 +33,16 @@ function newButton(x,y,width,height,content)
 	obj.width = width or 24
 	obj.height = height or 80
 	obj.content = content or "This button has no content!"
-	obj.tl = 25
-	obj.tr = nil
-	obj.bl = nil
-	obj.br = nil
-	obj.bgcolor = {64,64,64,128}
-	obj.bgcolor_hover = {128,128,128,196}
-	obj.bgcolor_click = {196,196,196,255}
+	obj.tl = 5
+	obj.tr = 5
+	obj.bl = 5
+	obj.br = 5
+	obj.bgcolor = {225,225,225,225}
+	obj.bgcolor_hover = {196,196,196,240}
+	obj.bgcolor_click = {128,128,128,255}
 	obj.current_bgcolor = {unpack(obj.bgcolor)}
 	obj.hover = false
-	obj.fgcolor = {255,255,255}
+	obj.fgcolor = {0,0,0}
 	obj.font = Subtitle
 	return setmetatable(obj,{__index=_button})
 end

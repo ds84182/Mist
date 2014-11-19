@@ -8,8 +8,9 @@ require "notification"
 flux = require "flux"
 require "banner"
 require "ui.button"
+require "log"
 
---install save draw that doesn't complain over null drawables--
+--install safe draw that doesn't complain over null drawables--
 local lgd = love.graphics.draw
 function love.graphics.draw(i,...)
 	if i then
@@ -37,23 +38,35 @@ function roundrect(mode,x,y,w,h,tl,tr,bl,br)
 	love.graphics.pop()
 end
 
+--downloader!--
+download_thread = love.thread.newThread("thread/download.lua")
+download_thread:start()
+download_channel = love.thread.getChannel("download")
+function download(progress, reply, url, port)
+	download_channel:push {progress, reply, url, port}
+end
+
 function love.load()
+	log "-- MIST SUPER UBER AWESOME BETA LOG --"
 	local fadeid = love.image.newImageData(64,1)
-	local a = 255
+	local a = 64
 	for i=0,63 do
 		fadeid:setPixel(i,0,255,255,255,math.floor(a))
-		a = a-(255/64)
-		print(a)
+		a = a-1
 	end
 	
 	fade = love.graphics.newImage(fadeid)
 	
+	--[[modes = love.window.getFullscreenModes()
+	table.sort(modes, function(a, b) return a.width*a.height > b.width*b.height end)   -- sort from smallest to largest
+	love.window.setMode(modes[1].width,modes[1].height,{vsync=true})
+	love.window.setFullscreen(true)]]
+	
 	Gamestate.registerEvents()
 	Gamestate.switch(require "state.loading")
-	--[[cron.add(cron.every(5,function()
+	cron.add(cron.every(5,function()
 		notification.add("Periodic notification")
-	end))]]
-	love.window.setMode(800,600,{vsync=true})
+	end))
 end
 
 function love.update(dt)

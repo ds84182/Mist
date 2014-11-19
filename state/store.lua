@@ -12,11 +12,12 @@ local repo = "http://ds84182.github.io/mist/"
 local http = require "socket.http"
 local uielements = {}
 
-local function startDownload(url)
-	local chan = love.thread.getChannel(url)
-	local thread = love.thread.newThread("thread/download.lua")
-	thread:start(url)
-	return chan, love.thread.getChannel(url.."_progress")
+local width, height
+
+local function startDownload(url,port)
+	local progress, result = love.thread.newChannel(), love.thread.newChannel()
+	download(progress, result, url, port)
+	return result, progress
 end
 
 local function formatVersion(ver)
@@ -95,19 +96,21 @@ function store:enter()
 	print("Store entered")
 	listdl = startDownload(repo.."games.txt")
 	
-	uielements.install = newButton(0,500,400,100,"Install")
-	uielements.install.bl = 25
+	width, height = love.graphics.getDimensions()
+	
+	uielements.install = newButton(0,height-100,width/2,100,"Install")
+	uielements.install.bl = 5
 	uielements.install.tr = 0
 	uielements.install.br = 0
 	function uielements.install:click(x,y,b)
 		install()
 	end
 	
-	uielements.exit = newButton(400,500,400,100,"Exit")
+	uielements.exit = newButton(width/2,height-100,width/2,100,"Exit")
 	uielements.exit.tl = 0
 	uielements.exit.bl = 0
-	uielements.exit.tr = 25
-	uielements.exit.br = 25
+	uielements.exit.tr = 5
+	uielements.exit.br = 5
 	function uielements.exit:click(x,y,b)
 		Gamestate.pop()
 	end
@@ -190,10 +193,10 @@ function store:draw()
 		
 		love.graphics.setColor(0,0,0,255)
 		if Store[cur-1] then
-			love.graphics.draw(fade,0,0,0,1,600)
+			love.graphics.draw(fade,0,0,0,1,height)
 		end
 		if Store[cur+1] then
-			love.graphics.draw(fade,800,0,0,-1,600)
+			love.graphics.draw(fade,width,0,0,-1,height)
 		end
 		
 		love.graphics.setColor(255,255,255)
@@ -203,13 +206,13 @@ function store:draw()
 		love.graphics.print(game.desc,0,Subtitle:getHeight())
 		love.graphics.print(Games[game.id] and (isUpdated(Games[game.id].version, game.version) and "Game has an update (installed version: "..formatVersion(Games[game.id].version)..")" or "Game already installed") or "Game is avaliable for download",0,Subtitle:getHeight()+Caption:getHeight())
 		
-		love.graphics.printf("Version: "..formatVersion(game.version),600,0,200,"right")
+		love.graphics.printf("Version: "..formatVersion(game.version),width-200,0,200,"right")
 		
 		if Downloads and Downloads[game.id] then
 			local prg = Downloads[game.id][2]
 			local progress = prg:pop() or (game.dl or {0,0})
 			game.dl = progress
-			love.graphics.printf("Download Progress: "..progress[1].."/"..progress[2],400,100,400,"right")
+			love.graphics.printf("Download Progress: "..progress[1].."/"..progress[2],width/2,100,width/2,"right")
 		end
 	end
 	

@@ -11,19 +11,37 @@ local game = {}
 
 for i, v in pairs(all_callbacks) do
 	game[v] = function(st, ...)
-		return current_game[v](...)
+		if current_game[v] then
+			return current_game[v](...)
+		end
 	end
 end
 
 local oldcfg = {love.window.getMode()}
 
-game.enter = function(st)
+function game.enter(st)
 	love.graphics.clear()
 	love.graphics.present()
 	current_game.load()
 end
 
-game.quit = function(st)
+function game.keypressed(st,key,a,b,c,d)
+	if key == "lgui" then
+		--do nothing.
+	elseif current_game.keypressed then
+		current_game.keypressed(key,a,b,c,d)
+	end
+end
+
+function game.keyreleased(st,key,a,b,c,d)
+	if key == "lgui" then
+		Gamestate.push(require "state.multitaskui")
+	elseif current_game.keyreleased then
+		current_game.keyreleased(key,a,b,c,d)
+	end
+end
+
+function game.quit(st)
 	--exit state
 	love.window.setMode(unpack(oldcfg))
 	love.window.setTitle("Mist")
